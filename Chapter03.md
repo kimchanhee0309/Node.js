@@ -1,4 +1,7 @@
-# Node.js와 모듈
+# 3장. Node.js와 모듈
+
+* Node.js의 모듈(파일 분할)을 설명하는 장
+  * 애플리케이션 작성에 필수인 파일 분할을 다룸
 
 <details>
 <summary>3.1 CommonJS 모듈</summary>
