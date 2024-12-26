@@ -19,7 +19,7 @@ ___
 <details>
 <summary>2.2 자바스크립트 기초</summary>
 <div markdown="1">    
-
+ 
 ### 2.2.1 변수
 
 선언 시 사용 | 내용 
@@ -448,7 +448,38 @@ ___
 <summary>2.3 자바스크립트와 상속</summary>
 <div markdown="1">    
 
+* 자바스크립트는 class를 베이스로 하는 언어가 아닌 prototype이라는 구조로 상속을 구현함
+
 ### 2.3.1 자바스크립트와 class
+* ES6 이후에는 자바스크립트에도 class 구문이 도입됨
+```javascript
+class People {
+  // 생성자
+  constructor(name) {
+    this.name = name;
+  }
+  printName() {
+    console.log(this.name);
+  }
+}
+
+const foo = new People('foo-name');
+foo.printName(); // foo-name
+
+===============================================
+// 같은 코드를 prototype으로 구현 시
+// 생성자
+function People(name) {
+  this.name = name;
+}
+
+People.prototype.printName = function() {
+  console.log(this.name);
+}
+
+const foo = new People('foo-name');
+  foo.printName(); // foo-name
+```
 
 </div>
 </details>
@@ -459,6 +490,108 @@ ___
 <summary>2.4 자바스크립트와 this</summary>
 <div markdown="1">    
 
+* this 키워드를 사용하면 인스턴스 자체에 대한 참조에 접근할 수 있음
+* 자바스크립트의 this는 실행된 위치(콘텍스트)에 따라 값이 달라지는 속성임
+  * 예) 전역 콘텍스트에서 실행된 this는 Node.js에서는 global 객체를 가리킴(이것이 브라우저에서는 window 객체가 됨)
+    * global 객체는 보든 파일 및 모듈에서 같은 참조를 반환하는 객체임
+```javascript
+function isGlobal() {
+  console.log(this === global);
+}
+
+isGlobal(); // true
+```
+
+* this 키워드를 객체에 넣어서 실행하는 예시
+```javascript
+function printName() {
+  console.log(this.name);
+}
+
+printName(); // undefined
+
+============================
+ - 여기에서 this는 global 객체를 나타냄
+ - global에는 name이라는 속성이 없으므로 undefined가 출력됨                                
+```
+
+```javascript
+function printName() {
+  console.log(this.name);
+}
+
+const obj = {
+  name: 'obj-name',
+  printName: printName
+};
+
+obj.printName(); // obj-name
+
+===============================
+ - printName 내부의 this는 obj 자신이 됨
+ - So, obj 자신이 가지고 있는 name 속성의 값이 출력됨 
+```
+
+```javascript
+function printName() {
+  setTimeout(function () {
+    console.log(this.name)
+  }, 1000);
+}
+
+const obj = {
+  name: 'obj-name',
+  printName: printName
+};
+
+obj.printName(); // undefined
+
+===============================
+ - console.log(this.name)이라는 콘텍스트가 타이머(setTimeout)에 옮겨져 this가 타이머를 가리키게 되면서 undefined를 출력함
+```
+
+* 실행되는 콘텍스트에 따라 this의 값은 달라짐
+* 즉, this가 사용되는 코드에서는 항상 실행되는 코ㅓㄴ텍스트를 의식해야 함을 의미함 + 코드를 복잡하게 만듬.
+
+* 코드의 this를 원래의 대상으로 되돌리는 방법
+  * **bind** 를 사용해 this를 고정하거나
+  * this를 별명으로 저장해두는 기법 사용
+ 
+```javascript
+function printName() {
+  setTimeout(function () {
+    console.log(this.name)
+    // 이 함수의 모든 콘텍스트를 printName의 this에 고정함.
+  }.bind(this), 1000);
+}
+
+const ojb = {
+  name: 'obj-name',
+  printName: printName
+};
+
+obj.printName(); // obj-name
+```
+
+* 화살표 함수를 이용하면 bind와 같은 효과를 얻을 수 있음
+```javascript
+function printName() {
+  //화살표 함수를 사용한다.
+  setTimeout(() => {
+    console.log(this.name)
+  }, 1000);
+}
+
+const obj = {
+  name: 'obj-name',
+  printName: printName
+};
+
+obj.printName();
+```
+* 화살표 함수는 실행 시 콘텍스트를 고정하는(=this로의 생각지 못한 접근을 방지하는) 역할을 함
+* 화살표 함수 안의 this는 실행 시의 콘텍스트에 좌우되지 않으며, 정의 시 this의 값이 결정됨
+
 </div>
 </details>
 
@@ -468,11 +601,241 @@ ___
 <summary>2.5 ES6 이후의 중요한 문법</summary>
 <div markdown="1">    
 
-### 2.5.1 전개 구문
+### 2.5.1 전개(Spread) 구문
+* 0개 이상의 인수와 배열, 객체 등을 전개하는 구문
+* 여러 개의 배열이나 객체에서 새로운 참조를 가진 배열이나 객체를 생성할 때 편리함
+* 변수 앞에 ...를 붙여 객체를 전개할 수 있음
+* 배열을 전개 구문을 사용한 경우
+```javascript
+const a = [1, 2, 3];
+const b = [4, 5, 6];
+const c = [...a, ...b]; // [1, 2, 3, 4, 5, 6]
+```
+
+* Object를 전개 구문을 사용하여 새로운 객체를 작성한 예시
+```javascript
+const obj1 = {
+  a: 'aaa',
+  b: 'bbb'
+};
+
+const obj2 = {
+  c: 'ccc'
+};
+
+const obj3 = {
+  ...obj1,
+  ...obj2
+};
+
+// {
+//   a: 'aaa',
+//   b: 'bbb',
+//   c: 'ccc'
+// }
+```
+
+* 배열이나 객체를 함성하는 것뿐이라면 Array.Push를 이용하거나 속성을 추가하는 등의 방법을 사용할 수 있음
+```javascript
+const a = [1, 2, 3];
+a.push(4, 5, 6);
+const c = a; // [1, 2, 3, 4, 5, 6]
+
+const obj1 = {
+  a: 'aaa',
+  b: 'bbb'
+};
+
+obj1.c = 'ccc';
+
+const obj3 = obj1;
+// {
+//   a: 'aaa',
+//   b: 'bbb',
+//   c: 'ccc'
+// }
+```
+
+* 전개 구문 사용 시 장점
+  * 새로운 참조를 가진 배열이나 객체를 생성할 수 있음
+```javascript
+$ node
+> const a = { a: 'aaa' }
+undefined
+> b = a
+{ a: 'aaa' }
+# a와 b는 같은 주소를 가진 객체이므로 비교 결과 true를 반환한다.
+> a === b
+true
+# a를 기반으로 한 새로운 객체를 생성한다.
+> const c = { ...a }
+undefined
+# a와 c는 다른 주소를 가진 객체이므로 비교 결과 false를 반환한다.
+> a === c
+false
+# a와 b는 같은 주소, a와 c는 다른 주소를 가진 객체이다.
+# a에 foo 속성을 추가한다.
+> a.foo = 'foo'
+'foo'
+> a
+{ a: 'aaa', foo: 'foo' }
+# b는 같은 주소를 가진 참조이므로 b에도 foo 속성이 추가된다.
+> b
+{ a: 'aaa', foo: 'foo' }
+# c는 다른 객체이므로 c에는 foo가 추가되지 않는다.
+> c
+{ a: 'aaa' }
+```
+
+* 주의할 점 : 전개 구문은 참조를 전개한다는 점!!
+  * 원시 값만 있거나 객체의 중첩이 한 단계인 경우에는 단순히 새로운 객체의 사본을 생성하는 것으로 볼 수 있지만,
+  * 객체가 포함돼 있을 때는 주의해야 함
+```javascript
+const a = [
+  { foo: 'foo1' },
+  'foo2',
+  { foo: 'foo3' }
+];
+const b = [
+  { foo: 'foo4' },
+  'foo5',
+  { foo: 'foo6 }
+];
+
+const c = [...a, ...b];
+console.log(c[0].foo); // foo1
+
+a[0].foo = 'bar1';
+// c[0]에는 a[0] 객체 참조가 들어 있으므로 a[0] 객체의 값을 바꿔 쓰면 c[0]도 바꿔써짐
+console.log(c[0].foo); // bar1
+
+a[1] = 'bar2';
+// a[1]은 원시 값이므로 a[1]을 바꿔 써도 c[1]은 바꿔 써지지 않는다.
+console.log(c[1].foo); // foo2
+
+===================================================================================
+
+const obj1 = {
+  a: 'aaa',
+  b: {
+    foo: 'bbb'
+  }
+};
+
+const obj2 = {
+  c: {
+    foo: 'ccc'
+  }
+};
+
+const obj3 = {
+  ...obj1,
+  ...obj2
+};
+
+obj1.b.foo = 'bbb-update';
+// obj3.b에는 obj1.b의 참조가 들어 있으므로 obj1.b의 값을 바꿔 쓰면 obj3.b.의 값도 바꿔 써짐
+
+console.log(obj3.b.foo) // bbb-update
+
+/// obj1.a는 원시 값이므로 obj1.a의 값을 바꿔 써도 obj3.a의 값은 바꿔 써지지 않는다.
+obj1.a = 'aaa-update';
+console.log(obj3.a) // aaa
+```
+
+* 전개 구문은 객체뿐만 아니라 함수의 인수에도 이용할 수 있음
+```javascript
+const args = [1, 2, 3];
+
+function add(x, y, z) {
+  return x + y + z;
+}
+
+const total = add(...args);
+console.log(total); // 6
+```
 
 ### 2.5.2 분할 대입
+* 배열, 객체 등에서 값을 모아서 꺼내는 구문. 배열의 경우 인덱스에 원하는 변수 이름을 붙여서 꺼낼 수 있음
+```javascript
+const [first, second, ...foo] = [10,. 20, 30, 40, 50];
+console.log(first); // 10
+console.log(second); // 20
+console.log(foo); // [30, 40, 50]
+
+const { a, b, ...bar } = {
+  a: 10,
+  b: 20,
+  c: 30,
+  d: 40
+};
+
+console.log(a); // 10
+console.log(b); // 20
+console.log(bar); // { c: 30, d: 40 }
+```
+
+* 객체도 콜론(:)을 사용해 별칭을 붙여서 꺼낼 수 있음
+```javascript
+const obj = {
+  a: 10,
+  b: 20,
+  c: 30
+};
+
+const { a: foo, c: bar } = obj;
+console.log(foo); // 10
+console.log(bar); // 30
+```
 
 ### 2.5.3 루프
+* for문
+```javascript
+const arr = ['foo', 'bar', 'baz'];
+
+for (let i = 0; i < arr.length; i++) {
+  console.log(arr[i]);
+}
+
+// foo
+// bar
+// baz
+```
+
+* Array.forEach
+```javascript
+const arr = ['foo', 'bar', 'baz'];
+
+arr.forEach((element) => {
+  console.log(element);
+});
+
+// foo
+// bar
+// baz
+```
+
+* for ... of(ES6 이후)
+```javascript
+const arr = ['foo', 'bar', 'baz']
+
+for (const element of arr) {
+  console.log(element);
+}
+
+// foo
+// bar
+// baz
+```
+
+* for ... of는 반복 처리할 수 있는 객체에 루프 처리를 할 수 있음
+* for ... of는 배열 이외의 객체에 루프를 할 수 있고, 도중에 비동기 처리를 삽입할 수 있다는 강점이 있음
+* Array 객체 이외에도 Map, Set 처럼 반복 처리할 수 있는 속성을 가진 객체는 for ... of로 반복 처리할 수 있음
+* 객체의 키를 루프 처리하는 for ... in도 있음
+  * But, for ... in은 임의의 순서로 배열을 반복하므로 순서가 중요한 배열을 반복할 때는 사용해서는 안 됨
+  * 또한 프로토타입 속성까지 반복하므로 명확한 의도가 없는 한 for ... in은 사용하지 않는 것이 좋음
+* 인덱스가 필요하지 않을 때 -> for ... of
+* 인덱스가 필요할 때 -> for
 
 </div>
 </details>
