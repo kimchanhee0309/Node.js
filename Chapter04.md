@@ -283,6 +283,37 @@ readFileAsync(__filename)
 * 프로미스 체인을 이용하면 콜백에 비해 중첩을 깊게 만들지 않고 처리를 연결할 수 있음
 
 #### promisify와 promise 인터페이스
+* util.promisify는 다음 관례에 따르는 콜백 함수를 프로미스로 바꿀 수 있음
+관례 | - 
+----------------- | ------------------ 
+API의 가장 마지막 인수가 콜백 | -
+콜백의 1번째 인수가 에러 객체 | -
+처리 완료 시에 1번만 호출되는 콜백 함수 | -
+
+* promisity 사용 예시
+```javascript
+const { promisify } = require('util');
+const { readFile, writeFile, chmod } = require('fs');
+const readFileAsync = promisify(readFile);
+const writeFileAsync = promisify(writeFile);
+const chmodAsync = promisify(chmod);
+```
+```javascript
+const { readFile, writeFile, chmod } = require('fs/promises');
+
+const backupFile = `${__filename}-${Date.nopw()}`;
+
+readFile(__filename)
+  .then((data) => {
+    return writeFile(backupFile, data);
+  })
+  .then(() => {
+    return chmod(backupFile, 0o400);
+  })
+  .catch((err) => {
+    console.error(err);
+  });
+```
 
 </div>
 </details>
