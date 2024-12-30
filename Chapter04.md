@@ -324,6 +324,48 @@ ___
 <summary>4.4 async/await</summary>
 <div markdown="1">    
 
+* 프로미스로 작성하기 어려운 루프나 조건 분기 처리를 쉽게 처리할 수 있게 해줌
+* 프로미스를 이용한 비동기 처리를 동기적인 형태로 기술할 수 있음
+* async를 붙여 함수를 선언하면 그 안에 await를 작성할 수 있음
+* await는 이어진 식에서 반환된 프로미스의 결과가 나올 때까지 그 부분의 실행을 중지함
+
+```javascript
+async function someFunc() = {
+  const foo = await 프로미스를_반환하는_식;
+  const bar = await 프로미스를_반환하는_식; // 앞의 await가 완료될 때까지 실행되지 않음
+  await 프로미스를_반환하는_식;
+};
+
+const someFuncArrow = async () => {
+  await 프로미스를_반환하는_식;
+};
+```
+```javascript
+const { readFile, writefile, chmod } = require('fs/promises');
+
+const main = async () => {
+  const backupFile = `${__filename}-${Date.now()}`;
+
+  const data = await readFile(__fimename);
+  await writeFile(backupFile, data);
+  await chmod(backupFile, 0o400);
+
+  return 'done';
+};
+
+main()
+  .then((data) => {
+    console.log(data);
+  })
+  .catch((err) => {
+    console.error(err);
+  });
+```
+* 이 코드에서는 main 함수에 async를 선언
+* async 함수의 return에서 반환한 결과를 then으로 받고 catch에서 포괄적인 에러 핸들링을 할 수 있음
+* 프로미스와 async/await는 서로 호출할 수 있다는 점 중요
+* async를 선언한 함수 안에서 await를 사용해 프로미스를 호출함으로써, 프로미스의 결과가 반환될 때까지 다음 처리의 실행을 기다릴 수 있음
+
 </div>
 </details>
 
@@ -333,7 +375,118 @@ ___
 <summary>4.5 스트림 처리</summary>
 <div markdown="1">    
 
+* async/await와 같은 비동기 흐름 제어 외에 이벤트 주도 방식의 비동기 흐름 제어(스트림 처리)가 존재함
+  * **비동기 흐름 제어**
+    * 콜백
+    * 프로미스
+    * async/await
+  * **이벤트 주도 방식의 비동기 흐름**
+    * 스트림 처리(EventEmitter/Stream)
+
+* 이벤트 주도 방식의 흐름 제어에서는 다양한 시점에서 처리를 수행함
+* 콜백과 같은 일회성 처리에 비해 데이터를 순차 처리함으로써 메모리를 효율적으로 이용할 수 있음
+* 이벤트 루프를 오랜 시간 정지시키는 처리를 나누고 싶을 때도 효과적임
+
+* 스트림 처리를 수행하는 대표적인 예시
+  * HTTP 요청/응답
+  * TCP
+  * 표준 입출력
+
+* 예시 코드
+```javascript
+const EventEmitter = require('events');
+
+// EventEmitter의 베이스 클래스를 상속해 사용자 이벤트를 다루는 EventEmitter를 정의
+class MyEmitter extends EventEmitter {}
+
+const myEmitter = new MyEmitter();
+
+// myevent라는 이름의 event를 받는 리스너를 설정
+myEmitter.on('myevent', (data) => {
+  console.log('on myevent:', data);
+});
+
+// myevent 발행
+myEmitter.emit('myevent', 'one');
+
+setTimeout() => {
+  // myevent 발행
+  myEmitter.emit('myevent', 'two');
+}, 1000);
+
+=======================================
+<결과>
+$ node index.js
+on myevent: one
+on myevent: two
+```
+
+* EventEmitter는 '몇 번이고', '작게 쪼개져' 발생하는 비동기 이벤트를 제어하기 위한 구현임
+* Stream은 EventEmitter에 데이터를 저장할 내부 버퍼를 조합한 것이라 이해하면 됨
+  * 내부 버퍼에 데이터가 일정량 모이면 이벤트가 발생함
+* Stream 객체 사이는 연결할 수 있음
+  * 모은 데이터를 다른 형식으로 변환하는 Stream을 중간에 연결하면, 데이터가 전부 모이기 전에 변환 가능한 것부터 처리를 시작할 수 있음
+  * 또한 모든 데이터를 메모리에 저장하지 않고 처리하므로 메모리 사용량을 쉽게 억제할 수 있음
+* Stream을 이용하면 이벤트 연결, 데이터 흐름량 조정, 변환 처리 등 연속하는 데이터 흐름을 효율적으로 다룰 수 있음
+* Node.js에서 사용하닌 4가지 Stream 처리 기반
+Stream 종류 | 설명 
+----------------- | ------------------ 
+Writable | 데이터 쓰기에 이용한다(예: fs.createWriteStream).
+Readable | 데이터 읽기에 이용한다(예: fs.createReadStream).
+Duplex | 쓰기/읽기 양쪽에 대응한다(예: net.Socket).
+Transform | Duplex를 상속해 읽고 쓴 데이터를 변환한다(ex: zlib.createDeflate).
+
+* 콜백과 스트림의 차이
+  * 콜백은 완료 시 한 번 호출되지만, 스트림 처리는 하나의 처리에 대해 여러 번의 처리가 발생함
+
+* 예시 코드
+```javascript
+const http = require('http');
+
+//서버에 대해 요청하는 객체를 생성
+const req = http.request('http://localhost:3000', (res) => {
+  //흘러오는 데이터를 utf8로 해석한다.
+  res.setEncoding('utf8');
+
+  // data 이벤트를 받는다.
+  res.on('data', (chunk) => {
+    console.lg(`body: ${chunk}`);
+  });
+
+  // end 이벤트를 받는다.
+  res.on('end', () => {
+    console.log('end');
+  });
+});
+
+// 여기에서 처음으로 요청이 송신됨
+req.end();
+```
+* .on
+  * http.request의 콜백에 전달된 res는 HTTP 요청의 응답을 나타내는 스트림 객체임
+  * 즉, 다음에 표시하는 위치에서 리스너가 각각 data와 end라는 이벤트를 받도록 설정함
+* data 이벤트는 상황에 따라 여러 차례 호출되어 리스너 내용이 여러 번 처리될 수 있음
+  * 큰 데이터를 가져오는 동안 다른 처리를 하지 못한다면 리소스가 아까움
+  * But, 스트림으로 처리하면 해당 리스터가 호출되는 시점까지 Node.js는 다른 처리를 할 수 있음
+  * 또한 데이터를 작게 쪼개 처리하기 때문에 한 번에 돌리는 루프가 작아지며, 더 작은 메모리에서도 동작이 가능하다는 장점이 있음
+
+```javascript
+const server = http.createServer();
+
+//독립적인 리스너로 정의할 수 있음
+server.on('request', (req, res) => {
+  res.write('hello world\n');
+  res.end();
+});
+
+server.listen(3000);
+```
+* 서버 입장에서는 클라 요청이 올 때까지 계속 기다리기만 하기에는 리소스가 아까움
+* So, 각각 클라 연결은 request 이벤트로 다루고 리스너를 등록함
+* 이렇게 하면 요청이 오지 않는 동안에 다른 요청을 받거나 다른 처리를 수행할 수 있음
+
 ### 4.5.1 스트림 처리의 에러 핸들링
+* 스트림 처리에서 에러 핸들링이 누락되면 에러를 포괄적으로 잡아낼 수 없고, 에러 발생 시 프로세스가 깨지므로 주의해야 함
 
 </div>
 </details>
@@ -344,7 +497,123 @@ ___
 <summary>4.6 Asynclterator</summary>
 <div markdown="1">    
 
+* 스트림 처리시 몇 가지 문제점
+  * async/await 등의 흐름 제어에 내장하기 어렵다.
+  * 에러 핸들링을 잊기 쉽고, 잊었을 때 영향이 크다.
+
+* **AsyncIterator(for await ... of)**
+  * 이것이 등장하면서 async/await와 스트림 처리의 호환성이 극적으로 향상됨
+  * AsyncIterator는 이벤트를 for문처럼 표현하여 async/await의 콘텍스트에서도 스트림 처리를 다룰 수 있게 해줌
+
 ### 4.6.1 Asynclterator가 도움이 되는 이유
+* AsyncIterator 유용성
+  * 자신의 파읽을 읽는다.
+  * 잠시 기다린 뒤 읽은 내용을 파일에 추가한다.
+  * 다음을 읽는다.
+ 
+#### AsyncIterator 없이 구현하기
+* 파일 쓰기 이외의 처리를 스트림 처리로 구현한 예시
+```javascript
+const fs = require('fs');
+
+// 파일을 읽는 Stream을 생성(64바이트 씩)
+const readStream = fs.createReadStream(__filename, { encoding: 'utf8', highWaterMark: 64 });
+
+let counter = 0;
+// 파일 데이터를 읽는 동안 실행되는 리스너
+readStream.on('data', (chunk) => {
+  console.log(counter, chunk);
+  counter++;
+});
+
+// 파일 읽기를 종료했을 때 실행되는 리스너
+readStream.on('close', () => {
+  console.log('close stream:');
+});
+
+readStream.on('error', (e) => {
+  console.log('error:', e);
+});
+```
+* fs.createReadStream은 파읽을 읽는 ReadableStream을 생성하는 함수임. 대상 파일을 읽는 Stream을 생성함
+* highWaterMark 옵션에는 데이터양을 설정함
+
+* '잠시 기다린 뒤, 읽은 내용을 파일에 쓴다'는 처리를 추가하는 코드
+  * 무작위로 몇 초 기다린 뒤 파일에 내용을 추가하는 write 함수 작성 + data 이벤트 핸들러로 호출
+  * setTimeout을 프로미스로 감싸서 비동기로 슬립하는 함수 선언하는 예시 코드
+```javascript
+const fs = require('fs');
+const { writeFile } = require('fs/promises');
+
+// 잠시 기다리는 비동기 함수
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+const readStream = fs.createReadStream(__filename, { encoding: 'utf8', highWaterMark: 64 });
+const writeFileName = `${__filename}-${Date.now()}`
+
+const write = async (chunk) => {
+  // (Math.random() * 1000)ms 동안 기다린다.
+  await sleep(Math.random() * 1000);
+  // 파일에 추가 모드로 쓴다.
+  await writeFile(writeFileName, chunk, { flag: 'a' });
+}
+
+let counter = 0;
+readStream.on('data', async (chunk) => {
+  console.log(counter);
+  counter++;
+
+  await write(chunk);
+});
+
+readStream.on('close', () => {
+  console.log('close');
+});
+
+readStream.on('error', (e) => {
+  console.log('error:', e);
+});
+```
+* data 이벤트의 핸들러를 async 함수로 만들어도 이전 data 데이터 이벤트를 대기하지 않고 다음 처리를 실행하기 때문에 결과값이 정신없이 쓰여있음
+* 이벤트 핸들러는 '언제', '얼마나' 호출될지 제어할 수 없으므로 모두 병렬로 처리됨
+* 병렬로 처리되면 실행 속도면에서는 유리하지만, 순차 쓰기와 같은 상황에서는 호환성이 좋지 못함
+
+#### AsyncIterator를 이용한 개선
+```javascript
+const fs = require('fs');
+const { writeFile } = require('fs/promises');
+// 잠시 기다리는 비동기 처리
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const writeFileName = `${__filename}-${Date.now()}`
+
+const write = async (chunk) => {
+  // (Math.random() * 1000)ms 동안 대기한다.
+  await sleep(Math.random() * 1000);
+  // 파일에 추가 모드로 쏜다.
+  await writeFile(writeFileName, chunk, { flag: 'a' });
+}
+
+const main = async () => {
+  const stream = fs.CreateReadStream(__filename, { encoding: 'utf8', highWaterMark: 64 });
+
+  let counter = 0;
+  // 비동기로 발생하는 이벤트를 직렬로 처리한다.
+  for await (const chunk of stream) {
+    console.log(counter);
+    counter++;
+
+    await write(chunk);
+  }
+}
+
+main()
+  .catch((e) => console.error(e));
+```
+* AsyncIterator는 비동기 처리를 구현한 객체를 마치 배열과 같이 반복 처리 할 수 있음
+* 각각의 요소는 for await ... of 안에서 선언한 변수에서 접근할 수 있음
+* Stream 객체에서는 for await ... of로 data 이벤트를 반복 처리할 수 있음
+* data 이벤트 처리 자체를 대기시킴으로써 쓰기 처리가 순차적으로 동작하게 됨
 
 </div>
 </details>
@@ -355,7 +624,25 @@ ___
 <summary>4.7 에러 핸들링 정리</summary>
 <div markdown="1">    
 
+* Node.js 에서 에러 핸들링이 누락돼 프로세스가 중단되면 모든 요청에서 에러가 발생해 큰 영향을 미침
+  * 이것은 하나의 요청에 하나의 프로세스를 할당하는 모델과 달리 여러 요청을 하나의 프로세스에서 받는 Node.js의 약점인
+  * 각 에러 핸들링 정리 표
+  * 
+동기/비동기 | 설계 | 에러 핸들링 
+----------------- | ------------------ | ------------------ 
+동기 처리 |  | try-catch, async/await
+비동기 처리 | 콜백 | if (err)
+비동기 처리 | EventEmitter(Stream) | emitter.on('error')
+비동기 처리 | async/await | try-catch, .catch()
+비동기 처리 | AsyncIterator | try-catch, .catch()
+
 ### 4.7.1 비동기 에러 핸들링
+* 비동기는 콜백, EventEmitter(Stream), async/await(AsyncIterator 포함)의 경우 각각 다음 에러 핸들링이 필요함
+  * 콜백: 에러의 null 체크
+  * EventEmitter(Stream): 에러 이벤트 핸들링
+  * async/await: try-catch와 상위 함수에서의 .catch()
+
+* Node.js 애플리케이션은 비동기 처리가 중심이므로 현재 환경에서는 async/await 위주로 설계하는 것이 좋음
 
 </div>
 </details>
